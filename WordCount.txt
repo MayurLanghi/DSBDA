@@ -1,0 +1,550 @@
+This is the classic Apache Hadoop MapReduce WordCount program. 
+
+Its purpose is:
+
+```text id="w5m56m"
+Count how many times each word appears in a file
+```
+
+Example:
+
+Input:
+
+```text id="q4aw9d"
+Hello Hadoop Hello World
+```
+
+Output:
+
+```text id="qmfeq2"
+hadoop 1
+hello 2
+world 1
+```
+
+---
+
+# Overall Working
+
+The program works in 3 parts:
+
+```text id="t9hvjp"
+Input File
+    ↓
+Mapper
+    ↓
+Shuffle & Sort
+    ↓
+Reducer
+    ↓
+Final Output
+```
+
+---
+
+# 1. Import Statements
+
+```java id="9ngv90"
+import java.io.IOException;
+import java.util.StringTokenizer;
+```
+
+
+
+Used for:
+
+| Import            | Purpose                    |
+| ----------------- | -------------------------- |
+| `IOException`     | Handles file errors        |
+| `StringTokenizer` | Splits sentence into words |
+
+---
+
+## Hadoop Imports
+
+```java id="y8xt9h"
+import org.apache.hadoop...
+```
+
+
+
+These are Hadoop libraries for:
+
+* Mapper
+* Reducer
+* Job configuration
+* Input/output handling
+
+---
+
+# 2. Main Class
+
+```java id="r5a7ae"
+public class WordCount
+```
+
+
+
+This is the main Hadoop program.
+
+---
+
+# 3. Mapper Class
+
+```java id="d4qtq7"
+public static class TokenizerMapper
+```
+
+
+
+Mapper reads input line-by-line.
+
+---
+
+## Mapper Type Declaration
+
+```java id="gnmzdu"
+extends Mapper<Object, Text, Text, IntWritable>
+```
+
+
+
+Format:
+
+```text id="twclhv"
+Mapper<InputKey, InputValue, OutputKey, OutputValue>
+```
+
+Meaning:
+
+| Type          | Meaning                 |
+| ------------- | ----------------------- |
+| `Object`      | Input key (line number) |
+| `Text`        | Input line              |
+| `Text`        | Output word             |
+| `IntWritable` | Output count            |
+
+---
+
+# Create Constant One
+
+```java id="kvn6vg"
+private final static IntWritable one = new IntWritable(1);
+```
+
+
+
+Every word occurrence contributes:
+
+```text id="e8v2s4"
+1
+```
+
+---
+
+# Create Word Variable
+
+```java id="d9xk5d"
+private Text word = new Text();
+```
+
+
+
+Stores each word temporarily.
+
+---
+
+# Mapper Function
+
+```java id="6lb9bf"
+public void map(Object key, Text value, Context context)
+```
+
+
+
+This runs for every line.
+
+---
+
+# Convert Line Into Words
+
+```java id="70v6g8"
+StringTokenizer itr = new StringTokenizer(value.toString());
+```
+
+
+
+Example line:
+
+```text id="k67u8i"
+Hello Hadoop Hello World
+```
+
+Tokenizer splits into:
+
+```text id="g3jlwm"
+Hello
+Hadoop
+Hello
+World
+```
+
+---
+
+# Loop Through Words
+
+```java id="o87bd2"
+while (itr.hasMoreTokens())
+```
+
+
+
+Processes each word one by one.
+
+---
+
+# Extract Word
+
+```java id="qeh6iw"
+word.set(itr.nextToken().toLowerCase());
+```
+
+
+
+Gets next word and converts to lowercase.
+
+Example:
+
+```text id="x5f6vp"
+Hello → hello
+```
+
+This avoids separate counts for:
+
+```text id="ddwckm"
+Hello
+HELLO
+hello
+```
+
+---
+
+# Emit Mapper Output
+
+```java id="4y1v7e"
+context.write(word, one);
+```
+
+
+
+Mapper output becomes:
+
+```text id="kz3c6o"
+hello → 1
+hadoop → 1
+hello → 1
+world → 1
+```
+
+---
+
+# Shuffle and Sort Phase
+
+Automatic Hadoop step.
+
+Groups same keys.
+
+Before shuffle:
+
+```text id="pkrf6w"
+hello → 1
+hadoop → 1
+hello → 1
+world → 1
+```
+
+After shuffle:
+
+```text id="jdxruj"
+hello → [1,1]
+hadoop → [1]
+world → [1]
+```
+
+---
+
+# 4. Reducer Class
+
+```java id="hh12qk"
+public static class IntSumReducer
+```
+
+
+
+Reducer combines counts.
+
+---
+
+## Reducer Declaration
+
+```java id="u59f4v"
+extends Reducer<Text, IntWritable, Text, IntWritable>
+```
+
+
+
+Reducer input:
+
+```text id="r9wpz9"
+word → list of counts
+```
+
+Reducer output:
+
+```text id="8v5od9"
+word → total count
+```
+
+---
+
+# Result Variable
+
+```java id="vljqyz"
+private IntWritable result = new IntWritable();
+```
+
+
+
+Stores final count.
+
+---
+
+# Reduce Method
+
+```java id="ekmjlwm"
+public void reduce(Text key, Iterable<IntWritable> values,
+                   Context context)
+```
+
+
+
+Example input:
+
+```text id="7qg5wc"
+hello → [1,1]
+```
+
+---
+
+# Sum Values
+
+```java id="p2h7ya"
+int sum = 0;
+```
+
+
+
+---
+
+# Add All Counts
+
+```java id="rfngrl"
+for (IntWritable val : values) {
+    sum += val.get();
+}
+```
+
+
+
+Example:
+
+```text id="v4owt7"
+1 + 1 = 2
+```
+
+---
+
+# Store Result
+
+```java id="2lkl08"
+result.set(sum);
+```
+
+
+
+---
+
+# Write Final Output
+
+```java id="5a0wj7"
+context.write(key, result);
+```
+
+
+
+Output:
+
+```text id="t8e0az"
+hello → 2
+```
+
+---
+
+# 5. Driver Method
+
+```java id="9j8c83"
+public static void main(String[] args)
+```
+
+
+
+Controls the whole Hadoop job.
+
+---
+
+# Check Arguments
+
+```java id="bb5oj2"
+if (args.length != 2)
+```
+
+
+
+Needs:
+
+```text id="6xieby"
+input path
+output path
+```
+
+---
+
+# Create Hadoop Configuration
+
+```java id="6jlwm4"
+Configuration conf = new Configuration();
+```
+
+
+
+Loads Hadoop settings.
+
+---
+
+# Create Job
+
+```java id="zjlwmc"
+Job job = Job.getInstance(conf, "Word Count");
+```
+
+
+
+Creates Hadoop job.
+
+---
+
+# Set Mapper & Reducer
+
+```java id="i2u1t9"
+job.setMapperClass(TokenizerMapper.class);
+job.setReducerClass(IntSumReducer.class);
+```
+
+
+
+Registers Mapper and Reducer.
+
+---
+
+# Set Output Types
+
+```java id="jzrf6s"
+job.setOutputKeyClass(Text.class);
+job.setOutputValueClass(IntWritable.class);
+```
+
+
+
+Final output format:
+
+```text id="plq0v3"
+word count
+```
+
+---
+
+# Input & Output Paths
+
+```java id="b0ok6q"
+FileInputFormat.addInputPath(job, new Path(args[0]));
+FileOutputFormat.setOutputPath(job, new Path(args[1]));
+```
+
+
+
+---
+
+# Run Job
+
+```java id="qb2ld9"
+job.waitForCompletion(true)
+```
+
+
+
+Starts Hadoop processing.
+
+---
+
+# Complete Example
+
+## Input File
+
+```text id="3z8v1f"
+Hello Hadoop Hello World
+```
+
+---
+
+## Mapper Output
+
+```text id="lqvjlwm"
+hello → 1
+hadoop → 1
+hello → 1
+world → 1
+```
+
+---
+
+## Shuffle & Sort
+
+```text id="qljlwm"
+hello → [1,1]
+hadoop → [1]
+world → [1]
+```
+
+---
+
+## Reducer Output
+
+```text id="f6m9x8"
+hello 2
+hadoop 1
+world 1
+```
+
+---
+
+# Viva Answer
+
+You can say:
+
+> This Hadoop MapReduce program counts word frequency in a text file.
+>
+> The Mapper tokenizes each line into words and emits `(word, 1)` pairs.
+>
+> Hadoop automatically groups identical words during shuffle and sort.
+>
+> The Reducer sums all counts for each word and outputs the final frequency.

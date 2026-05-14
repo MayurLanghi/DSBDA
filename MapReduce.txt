@@ -1,0 +1,423 @@
+Your project is a simple Apache Hadoop MapReduce program that analyzes log files and counts how many times each log level appears.
+
+The complete flow is:
+
+```text
+Input Log File
+      ↓
+Mapper
+      ↓
+Shuffle & Sort
+      ↓
+Reducer
+      ↓
+Final Output
+```
+
+Now let’s understand exactly how your code works internally.
+
+---
+
+# Example Input
+
+Suppose your log file contains:
+
+```text
+2024-01-15 10:00:01 INFO Server started
+2024-01-15 10:02:10 WARN High memory usage
+2024-01-15 10:03:15 ERROR Disk failure
+2024-01-15 10:05:30 ERROR Database lost
+```
+
+---
+
+# Step 1 — Driver Starts the Job
+
+File: `LogDriver.java` 
+
+This is the main class.
+
+Execution starts here:
+
+```java
+public static void main(String[] args)
+```
+
+
+
+---
+
+## What Driver Does
+
+The driver configures Hadoop.
+
+### Creates configuration
+
+```java
+Configuration conf = new Configuration();
+```
+
+
+
+This loads Hadoop settings.
+
+---
+
+### Creates Job Object
+
+```java
+Job job = Job.getInstance(conf, "Log File Analysis");
+```
+
+
+
+This creates a Hadoop job named:
+
+```text
+Log File Analysis
+```
+
+---
+
+### Sets Main Class
+
+```java
+job.setJarByClass(LogDriver.class);
+```
+
+
+
+Hadoop uses this to locate the JAR file.
+
+---
+
+### Sets Mapper
+
+```java
+job.setMapperClass(LogMapper.class);
+```
+
+
+
+Tells Hadoop:
+
+> “Use LogMapper for mapping.”
+
+---
+
+### Sets Reducer
+
+```java
+job.setReducerClass(LogReducer.class);
+```
+
+
+
+Tells Hadoop:
+
+> “Use LogReducer for reducing.”
+
+---
+
+### Output Data Types
+
+```java
+job.setOutputKeyClass(Text.class);
+job.setOutputValueClass(IntWritable.class);
+```
+
+
+
+Means output format is:
+
+```text
+(Text, IntWritable)
+```
+
+Example:
+
+```text
+ERROR 4
+INFO 6
+```
+
+---
+
+### Input & Output Paths
+
+```java
+FileInputFormat.addInputPath(job, new Path(args[0]));
+FileOutputFormat.setOutputPath(job, new Path(args[1]));
+```
+
+
+
+If command is:
+
+```bash
+hadoop jar log.jar LogDriver input output
+```
+
+then:
+
+| Argument | Meaning       |
+| -------- | ------------- |
+| input    | input folder  |
+| output   | output folder |
+
+---
+
+### Runs the Job
+
+```java
+job.waitForCompletion(true)
+```
+
+
+
+Hadoop starts processing.
+
+---
+
+# Step 2 — Mapper Phase
+
+File: `LogMapper.java` 
+
+Mapper processes one line at a time.
+
+---
+
+## Input to Mapper
+
+Example line:
+
+```text
+2024-01-15 10:03:15 ERROR Disk failure
+```
+
+---
+
+## Convert Line to String
+
+```java
+String line = value.toString();
+```
+
+
+
+---
+
+## Split Line
+
+```java
+String[] parts = line.split(" ");
+```
+
+
+
+Split result:
+
+| Index | Value      |
+| ----- | ---------- |
+| 0     | 2024-01-15 |
+| 1     | 10:03:15   |
+| 2     | ERROR      |
+| 3     | Disk       |
+| 4     | failure    |
+
+---
+
+## Extract Log Level
+
+```java
+logLevel.set(parts[2]);
+```
+
+
+
+Extracts:
+
+```text
+ERROR
+```
+
+---
+
+## Emit Key-Value Pair
+
+```java
+context.write(logLevel, one);
+```
+
+
+
+Outputs:
+
+```text
+ERROR → 1
+```
+
+---
+
+# Mapper Output
+
+After processing all lines:
+
+```text
+INFO  → 1
+WARN  → 1
+ERROR → 1
+ERROR → 1
+INFO  → 1
+```
+
+This is called:
+
+# Intermediate Output
+
+---
+
+# Step 3 — Shuffle and Sort
+
+This is automatic Hadoop processing.
+
+Hadoop groups same keys together.
+
+Before shuffle:
+
+```text
+ERROR → 1
+INFO  → 1
+ERROR → 1
+WARN  → 1
+INFO  → 1
+```
+
+After shuffle:
+
+```text
+ERROR → [1,1]
+INFO  → [1,1]
+WARN  → [1]
+```
+
+Same keys are grouped.
+
+---
+
+# Step 4 — Reducer Phase
+
+File: `LogReducer.java` 
+
+Reducer receives:
+
+```text
+ERROR → [1,1]
+```
+
+---
+
+## Initialize Sum
+
+```java
+int sum = 0;
+```
+
+
+
+---
+
+## Add All Values
+
+```java
+for (IntWritable val : values) {
+    sum += val.get();
+}
+```
+
+
+
+For ERROR:
+
+```text
+1 + 1 = 2
+```
+
+---
+
+## Write Final Output
+
+```java
+context.write(key, new IntWritable(sum));
+```
+
+
+
+Outputs:
+
+```text
+ERROR 2
+```
+
+---
+
+# Final Output File
+
+Hadoop creates:
+
+```text
+output/part-r-00000
+```
+
+Contents:
+
+```text
+ERROR 2
+INFO 2
+WARN 1
+```
+
+---
+
+# Full Data Flow Summary
+
+```text
+INPUT FILE
+    ↓
+Mapper reads each line
+    ↓
+Extracts log level
+    ↓
+Outputs:
+ERROR → 1
+INFO → 1
+WARN → 1
+    ↓
+Shuffle & Sort groups keys
+    ↓
+ERROR → [1,1]
+INFO → [1,1]
+WARN → [1]
+    ↓
+Reducer sums values
+    ↓
+ERROR → 2
+INFO → 2
+WARN → 1
+    ↓
+Stored in output/part-r-00000
+```
+
+---
+
+# Viva Explanation (Short Version)
+
+You can say:
+
+> This Hadoop MapReduce program analyzes log files and counts occurrences of each log level like INFO, WARN, and ERROR.
+>
+> The Mapper extracts the third word from each log line and emits `(logLevel, 1)`.
+>
+> Hadoop automatically groups same keys during shuffle and sort.
+>
+> The Reducer sums all values for each key and produces final counts.

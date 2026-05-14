@@ -1,0 +1,482 @@
+This is an Apache Spark program written in Scala that finds and prints all prime numbers from 1 to 50 using Spark. 
+
+The program uses Spark’s distributed processing model.
+
+---
+
+# What the Program Does
+
+It:
+
+1. Creates numbers from 1 to 50
+2. Checks which numbers are prime
+3. Filters prime numbers
+4. Prints them
+
+Final output:
+
+```text id="0nuztv"
+Prime Numbers:
+2
+3
+5
+7
+11
+13
+17
+19
+23
+29
+31
+37
+41
+43
+47
+```
+
+---
+
+# Line-by-Line Explanation
+
+---
+
+## Import Spark Libraries
+
+```scala id="e6o2bw"
+import org.apache.spark.{SparkConf, SparkContext}
+```
+
+
+
+Imports Spark classes:
+
+| Class          | Purpose                     |
+| -------------- | --------------------------- |
+| `SparkConf`    | Configures Spark            |
+| `SparkContext` | Main Spark execution engine |
+
+---
+
+# Object Declaration
+
+```scala id="twb0ly"
+object Prime {
+```
+
+
+
+Defines a Scala object named:
+
+```text id="3f4kg5"
+Prime
+```
+
+This is the main program class.
+
+---
+
+# Prime Number Function
+
+```scala id="9wt18k"
+def isPrime(n: Int): Boolean = {
+```
+
+
+
+Function checks whether a number is prime.
+
+---
+
+## Condition 1
+
+```scala id="yg1z9f"
+if (n <= 1) false
+```
+
+
+
+Numbers ≤ 1 are not prime.
+
+Example:
+
+```text id="4t4n7j"
+0 → not prime
+1 → not prime
+```
+
+---
+
+## Prime Logic
+
+```scala id="m1i6vq"
+else !(2 until n).exists(n % _ == 0)
+```
+
+
+
+This is the main logic.
+
+---
+
+# How This Works
+
+## `(2 until n)`
+
+Creates numbers from:
+
+```text id="hvw01u"
+2 to n-1
+```
+
+Example for `n = 7`:
+
+```text id="1svptl"
+2,3,4,5,6
+```
+
+---
+
+## `n % _ == 0`
+
+Checks divisibility.
+
+Example:
+
+```text id="1r2dsh"
+7 % 2
+7 % 3
+7 % 4
+...
+```
+
+If remainder becomes `0`, then number is not prime.
+
+---
+
+## `exists(...)`
+
+Checks whether ANY number divides `n`.
+
+Example:
+
+For `8`:
+
+```text id="8n69z7"
+8 % 2 == 0
+```
+
+So:
+
+```text id="2d53i0"
+exists = true
+```
+
+meaning:
+
+```text id="l4a5q7"
+8 is NOT prime
+```
+
+---
+
+## `!`
+
+Negation operator.
+
+If divisor exists:
+
+```text id="mdx2fy"
+true → false
+```
+
+If divisor does not exist:
+
+```text id="quj4th"
+false → true
+```
+
+So:
+
+| Number | Result    |
+| ------ | --------- |
+| 7      | Prime     |
+| 8      | Not prime |
+
+---
+
+# Main Function
+
+```scala id="36f6u2"
+def main(args: Array[String]): Unit = {
+```
+
+
+
+Program execution starts here.
+
+---
+
+# Spark Configuration
+
+```scala id="lsn1s2"
+val conf = new SparkConf()
+```
+
+
+
+Creates Spark configuration.
+
+---
+
+## Application Name
+
+```scala id="n4v7ij"
+.setAppName("Prime Program")
+```
+
+
+
+Sets application name.
+
+---
+
+## Local Mode
+
+```scala id="iud56n"
+.setMaster("local")
+```
+
+
+
+Runs Spark on local machine.
+
+Not on cluster.
+
+---
+
+# Create SparkContext
+
+```scala id="3yzeyv"
+val sc = new SparkContext(conf)
+```
+
+
+
+This starts Spark engine.
+
+`sc` is the main Spark object.
+
+---
+
+# Create Distributed Data
+
+```scala id="n8a5rf"
+val numbers = sc.parallelize(1 to 50)
+```
+
+
+
+Creates distributed collection:
+
+```text id="rqyzk7"
+1,2,3,4,5...50
+```
+
+Stored as RDD.
+
+---
+
+# Filter Prime Numbers
+
+```scala id="2y6cwl"
+val primes = numbers.filter(isPrime)
+```
+
+
+
+Spark checks each number using `isPrime()`.
+
+Non-primes removed.
+
+---
+
+# Print Heading
+
+```scala id="yq7lsh"
+println("Prime Numbers:")
+```
+
+
+
+Prints title.
+
+---
+
+# Collect and Print Results
+
+```scala id="j2jsph"
+primes.collect().foreach(println)
+```
+
+
+
+---
+
+## `collect()`
+
+Brings distributed data back to local machine.
+
+---
+
+## `foreach(println)`
+
+Prints each prime number.
+
+---
+
+# Stop Spark
+
+```scala id="brnn9u"
+sc.stop()
+```
+
+
+
+Stops Spark engine and frees memory.
+
+---
+
+# Overall Working Flow
+
+```text id="0iqrtn"
+1 to 50
+   ↓
+Spark RDD created
+   ↓
+Filter using isPrime()
+   ↓
+Prime numbers selected
+   ↓
+Collected to local system
+   ↓
+Printed on screen
+```
+
+---
+
+# Viva Explanation (Short)
+
+You can say:
+
+> This is an Apache Spark Scala program that finds prime numbers between 1 and 50.
+>
+> It creates a distributed dataset using `parallelize()`, filters numbers using the `isPrime()` function, and prints the prime numbers.
+>
+> Spark processes the data in parallel using RDD operations like `filter()` and `collect()`.
+
+
+
+
+Apache Software Foundation (often just called “Apache”) is a nonprofit organization that develops and maintains many famous open-source software projects.
+
+It is not a single software.
+
+It is an organization that manages projects like:
+
+| Software           | Purpose             |
+| ------------------ | ------------------- |
+| Apache Hadoop      | Big data processing |
+| Apache Spark       | Fast data analytics |
+| Apache Kafka       | Real-time streaming |
+| Apache Tomcat      | Runs Java web apps  |
+| Apache HTTP Server | Hosts websites      |
+| Apache Hive        | SQL on Hadoop       |
+
+---
+
+# What “Apache” Means in Your Programs
+
+When you see:
+
+```java id="7l3tca"
+import org.apache.hadoop...
+```
+
+or
+
+```scala id="t9w87n"
+import org.apache.spark...
+```
+
+it means those libraries belong to Apache projects.
+
+---
+
+# Apache Software Foundation (ASF)
+
+ASF manages:
+
+* open-source development
+* software licensing
+* documentation
+* community contributions
+
+Official site:
+
+[Apache Software Foundation](https://www.apache.org?utm_source=chatgpt.com)
+
+---
+
+# Why Apache Is Famous
+
+Apache projects are heavily used in:
+
+* big data
+* cloud computing
+* AI systems
+* web servers
+* distributed systems
+
+Many companies use Apache software:
+
+* Google
+* Netflix
+* Amazon
+* Meta
+
+---
+
+# In Simple Words
+
+Think of Apache like this:
+
+```text id="0z0l2q"
+Apache = Organization
+Hadoop = Software made by Apache
+Spark = Software made by Apache
+```
+
+So when people say:
+
+```text id="49q25y"
+“Apache Spark”
+```
+
+they mean:
+
+```text id="p7t3od"
+Spark project managed by Apache
+```
+
+---
+
+# Difference Between Hadoop and Spark
+
+| Hadoop                | Spark                   |
+| --------------------- | ----------------------- |
+| Disk-based processing | Memory-based processing |
+| Slower                | Faster                  |
+| Uses MapReduce        | Uses RDD/DataFrames     |
+| Older                 | More modern             |
+
+Both are Apache projects.
